@@ -1,0 +1,15 @@
+pub mod binarisation;
+pub mod clear;
+pub mod conv_toimg;
+pub mod convertpgm;
+pub mod cut;
+pub mod engine;
+pub mod find_edge;
+pub mod make_dataset;
+pub mod midsized_letter;
+pub mod neural_network;
+pub mod read_csv;
+pub mod resizing;
+pub mod solution;
+pub mod find_imgposition;
+pub mod actions_server;

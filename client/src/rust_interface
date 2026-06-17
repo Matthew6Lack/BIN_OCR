@@ -1,0 +1,243 @@
+use iced::{
+    Element, Length, Task, Theme,
+    widget::{
+        button, column, container, image, row, stack, text,
+        Space,
+    },
+    Color, Font, Pixels,
+    alignment::{Horizontal, Vertical},
+    Border,
+};
+
+// ─── Données ────────────────────────────────────────────────────────────────
+
+/// Liste des "images" binaires à faire défiler.
+/// En pratique ce sont des chaînes, mais vous pouvez remplacer
+/// par des handles d'images réelles si nécessaire.
+const BINARY_ITEMS: &[&str] = &[
+    "01100110001111001",
+    "11001010111000110",
+    "00111100101011011",
+    "10101010110011001",
+    "01110001001110101",
+    "11000011101010010",
+];
+
+// ─── Messages ────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone)]
+enum Message {
+    Previous,
+    Next,
+    Find,
+    Load,
+    Save,
+    Solve,
+}
+
+// ─── State ───────────────────────────────────────────────────────────────────
+
+struct BinaryViewer {
+    current_index: usize,
+    status_text: String,
+}
+
+impl Default for BinaryViewer {
+    fn default() -> Self {
+        Self {
+            current_index: 0,
+            status_text: String::new(),
+        }
+    }
+}
+
+// ─── App ─────────────────────────────────────────────────────────────────────
+
+impl BinaryViewer {
+    fn update(&mut self, message: Message) -> Task<Message> {
+        match message {
+            Message::Previous => {
+                if self.current_index == 0 {
+                    self.current_index = BINARY_ITEMS.len() - 1;
+                } else {
+                    self.current_index -= 1;
+                }
+                self.status_text.clear();
+            }
+            Message::Next => {
+                self.current_index = (self.current_index + 1) % BINARY_ITEMS.len();
+                self.status_text.clear();
+            }
+            Message::Find => {
+                self.status_text = format!(
+                    "Recherche : item {} / {}",
+                    self.current_index + 1,
+                    BINARY_ITEMS.len()
+                );
+            }
+            Message::Load => {
+                self.status_text =
+                    format!("Chargé : {}", BINARY_ITEMS[self.current_index]);
+            }
+            Message::Save => {
+                self.status_text =
+                    format!("Sauvegardé : {}", BINARY_ITEMS[self.current_index]);
+            }
+            Message::Solve => {
+                let val = u64::from_str_radix(BINARY_ITEMS[self.current_index], 2)
+                    .unwrap_or(0);
+                self.status_text = format!(
+                    "Résultat : {} (binaire) = {} (décimal)",
+                    BINARY_ITEMS[self.current_index],
+                    val
+                );
+            }
+        }
+        Task::none()
+    }
+
+    fn view(&self) -> Element<Message> {
+        let current_binary = BINARY_ITEMS[self.current_index];
+
+        // ── Fond d'écran ────────────────────────────────────────────────────
+        let background = image(image::Handle::from_path("assets/fond_app.png"))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .content_fit(iced::ContentFit::Cover);
+
+        // ── Flèche gauche ───────────────────────────────────────────────────
+        let arrow_left = button(
+            image(image::Handle::from_path("assets/blue_arrow.png"))
+                .width(Length::Fixed(50.0))
+                .height(Length::Fixed(50.0)),
+        )
+        .on_press(Message::Previous)
+        .style(|_theme, _status| button::Style {
+            background: None,
+            border: Border::default(),
+            ..Default::default()
+        })
+        .padding(4);
+
+        // ── Flèche droite (miroir horizontal via rotation CSS n'existe pas
+        //    en iced, on utilise la même image et on la retourne en canvas
+        //    ou on garde une copie miroir. Ici on réutilise l'image telle
+        //    quelle — ajoutez `blue_arrow_right.png` si vous avez un miroir)
+        let arrow_right = button(
+            image(image::Handle::from_path("assets/blue_arrow.png"))
+                .width(Length::Fixed(50.0))
+                .height(Length::Fixed(50.0)),
+        )
+        .on_press(Message::Next)
+        .style(|_theme, _status| button::Style {
+            background: None,
+            border: Border::default(),
+            ..Default::default()
+        })
+        .padding(4);
+
+        // ── Zone d'affichage binaire (rectangle blanc centré) ───────────────
+        let binary_display = container(
+            text(current_binary)
+                .size(Pixels(24.0))
+                .font(Font::MONOSPACE)
+                .color(Color::BLACK),
+        )
+        .style(|_theme| container::Style {
+            background: Some(iced::Background::Color(Color::WHITE)),
+            border: Border {
+                radius: 4.0.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .width(Length::Fill)
+        .padding([18, 24])
+        .align_x(Horizontal::Center)
+        .align_y(Vertical::Center);
+
+        // ── Rangée de défilement : flèche ◄ | affichage | flèche ► ─────────
+        let slider_row = row![
+            arrow_left,
+            binary_display,
+            arrow_right,
+        ]
+        .spacing(12)
+        .align_y(Vertical::Center)
+        .width(Length::Fill);
+
+        // ── Bouton générique avec image + label ─────────────────────────────
+        let make_btn = |img_path: &'static str, label: &'static str, msg: Message| {
+            button(
+                column![
+                    image(image::Handle::from_path(img_path))
+                        .width(Length::Fixed(80.0))
+                        .height(Length::Fixed(80.0)),
+                ]
+                .align_x(Horizontal::Center),
+            )
+            .on_press(msg)
+            .style(|_theme, _status| button::Style {
+                background: None,
+                border: Border::default(),
+                ..Default::default()
+            })
+            .padding(4)
+        };
+
+        // ── Rangée des 4 boutons ─────────────────────────────────────────────
+        let buttons_row = row![
+            make_btn("assets/find.png", "Find", Message::Find),
+            make_btn("assets/load.png", "Load", Message::Load),
+            make_btn("assets/save.png", "Save", Message::Save),
+            make_btn("assets/solve.png", "Solve", Message::Solve),
+        ]
+        .spacing(24)
+        .align_y(Vertical::Center);
+
+        // ── Texte de statut ──────────────────────────────────────────────────
+        let status = text(&self.status_text)
+            .size(Pixels(14.0))
+            .font(Font::MONOSPACE)
+            .color(Color::from_rgb(0.2, 0.8, 1.0));
+
+        // ── Contenu principal ────────────────────────────────────────────────
+        let content = container(
+            column![
+                Space::with_height(Length::Fill),
+                slider_row,
+                Space::with_height(Length::Fixed(32.0)),
+                buttons_row,
+                Space::with_height(Length::Fixed(16.0)),
+                status,
+                Space::with_height(Length::Fill),
+            ]
+            .spacing(0)
+            .align_x(Horizontal::Center)
+            .width(Length::Fill),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .padding([24, 48]);
+
+        // ── Stack : fond + contenu ───────────────────────────────────────────
+        stack![background, content].into()
+    }
+
+    fn theme(&self) -> Theme {
+        Theme::Dark
+    }
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+fn main() -> iced::Result {
+    iced::application("Binary Viewer", BinaryViewer::update, BinaryViewer::view)
+        .theme(BinaryViewer::theme)
+        .window(iced::window::Settings {
+            size: iced::Size::new(1100.0, 600.0),
+            resizable: true,
+            ..Default::default()
+        })
+        .run()
+}

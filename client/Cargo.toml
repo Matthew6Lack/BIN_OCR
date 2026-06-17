@@ -1,0 +1,20 @@
+[package]
+name = "BIN_OCR"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "BIN_OCR"
+path = "src/main.rs"
+
+[dependencies]
+iced = { version = "0.14", features = ["image", "svg","canvas"] }
+rfd = "0.14"
+image = "0.25"
+tokio = { version = "1", features = ["full"] }
+
+[profile.release]
+opt-level = 3
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1.12"
