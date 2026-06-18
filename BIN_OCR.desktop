@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Version=1.0
-Name=Client BIN_OCR
-Comment=Application Client EPITA
-Exec=/home/eram/Desktop/EPITA/2année/BIN_OCR/client/target/debug/BIN_OCR
-Icon=/home/eram/Desktop/EPITA/2année/BIN_OCR/client/BIN_app.ico
-Terminal=false
-Categories=Utility;Development;
